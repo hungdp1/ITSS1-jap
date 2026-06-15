@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2DD4BF;
+  --color-primary-hover: #27b3a9;
+  --color-accent: #F97316;
+  --color-accent-hover: #e66b15;
+  --color-background: #FFFFFF;
+  --color-surface: #F0F5F2;
+  --color-footer: #E5E9E6;
+  --color-text-main: #181D1B;
+  --color-text-muted: #3E4948;
+  --color-text-inverse: #FFFFFF;
+
+  --font-sans: var(--font-noto-sans-jp), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-main antialiased;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes profile-action-scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes profile-action-slide-up {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 12px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+  }
+
+  .animate-profile-action-scale-in {
+    animation: profile-action-scale-in 0.25s ease-out forwards;
+  }
+
+  .animate-profile-action-slide-up {
+    animation: profile-action-slide-up 0.3s ease-out forwards;
+  }
+}

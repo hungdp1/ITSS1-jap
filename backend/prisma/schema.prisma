@@ -1,0 +1,368 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model VerifiedUser {
+  id                Int                @id @default(autoincrement()) @map("user_id")
+  email             String             @unique
+  password          String
+  firstName         String?            @map("first_name")
+  lastName          String?            @map("last_name")
+  dateOfBirth       DateTime?          @map("date_of_birth")
+  location          String?
+  bio               String?
+  avatarUrl         String?            @map("avatar_url")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  status            UserStatus         @default(PENDING)
+  notifications     Notification[]
+  comments          Comment[]
+  eventEngagements  EventEngagement[]
+  events            Event[]
+  memberships       GroupMember[]
+  kycRequests       KycRequest[]
+  matchParticipants MatchParticipant[]
+  sentMessages      Message[]
+  postLikes         PostLike[]
+  posts             Post[]
+  reportParties     ReportParty[]
+  profileActionsSent     UserProfileAction[] @relation("ProfileActionsSent")
+  profileActionsReceived UserProfileAction[] @relation("ProfileActionsReceived")
+  hobbies           UserHobby[]
+  languages         UserLanguage[]
+  userPhotos        UserPhoto[]
+  purposes          UserPurpose[]
+
+  @@index([status])
+  @@map("verified_users")
+}
+
+model Notification {
+  id            Int          @id @default(autoincrement())
+  userId        Int
+  type          String
+  message       String
+  relatedUserId Int?         @map("related_user_id")
+  sessionId     Int?         @map("session_id")
+  isRead        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  user          VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model UserPhoto {
+  id     Int          @id @default(autoincrement())
+  url    String
+  isMain Boolean      @default(false)
+  userId Int          @map("user_id")
+  user   VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@map("user_photos")
+}
+
+model UserLanguage {
+  id       Int          @id @default(autoincrement())
+  language String
+  type     String?
+  level    String?
+  userId   Int          @map("user_id")
+  user     VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([language])
+  @@index([level])
+  @@map("user_languages")
+}
+
+model UserPurpose {
+  id      Int          @id @default(autoincrement())
+  purpose String
+  userId  Int          @map("user_id")
+  user    VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([purpose])
+  @@map("user_purposes")
+}
+
+model UserHobby {
+  id        Int          @id @default(autoincrement())
+  hobbyName String       @map("hobby_name")
+  userId    Int          @map("user_id")
+  user      VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([hobbyName])
+  @@map("user_hobbies")
+}
+
+model Post {
+  id        Int          @id @default(autoincrement()) @map("post_id")
+  content   String
+  createdAt DateTime     @default(now()) @map("created_at")
+  groupId   Int?         @map("group_id")
+  authorId  Int          @map("author_id")
+  image     String?
+  comments  Comment[]
+  likes     PostLike[]
+  author    VerifiedUser @relation(fields: [authorId], references: [id])
+  group     Group?       @relation(fields: [groupId], references: [groupId])
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+model PostLike {
+  userId Int          @map("user_id")
+  postId Int          @map("post_id")
+  post   Post         @relation(fields: [postId], references: [id])
+  user   VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@id([userId, postId])
+  @@map("post_likes")
+}
+
+model Comment {
+  id        Int          @id @default(autoincrement()) @map("comment_id")
+  content   String
+  createdAt DateTime     @default(now()) @map("created_at")
+  postId    Int          @map("post_id")
+  authorId  Int          @map("author_id")
+  author    VerifiedUser @relation(fields: [authorId], references: [id])
+  post      Post         @relation(fields: [postId], references: [id])
+
+  @@map("comments")
+}
+
+model MatchSession {
+  id           Int                @id @default(autoincrement()) @map("session_id")
+  status       String
+  createdAt    DateTime           @default(now()) @map("created_at")
+  participants MatchParticipant[]
+  messages     Message[]
+
+  @@map("match_session")
+}
+
+model MatchParticipant {
+  sessionId Int          @map("session_id")
+  userId    Int          @map("user_id")
+  session   MatchSession @relation(fields: [sessionId], references: [id])
+  user      VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@id([sessionId, userId])
+  @@index([userId])
+  @@map("match_participants")
+}
+
+model Message {
+  id             Int          @id @default(autoincrement()) @map("message_id")
+  content        String?
+  sendAt         DateTime     @default(now()) @map("send_at")
+  sessionId      Int          @map("session_id")
+  senderId       Int          @map("sender_id")
+  attachmentUrl  String?      @map("attachment_url")
+  deletedAt      DateTime?    @map("deleted_at")
+  editedAt       DateTime?    @map("edited_at")
+  isSeen         Boolean      @default(false) @map("is_seen")
+  messageType    MessageType  @default(TEXT) @map("message_type")
+  translatedText Json?        @map("translated_text")
+  sender         VerifiedUser @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  session        MatchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, sendAt])
+  @@index([sessionId, isSeen])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Event {
+  id              Int               @id @default(autoincrement()) @map("event_id")
+  title           String
+  description     String
+  eventTime       DateTime          @map("event_time")
+  format          String
+  address         String?
+  urlLink         String?           @unique @map("url_link")
+  imageUrl        String?           @map("image_url")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  adminId         Int               @map("admin_id")
+  administratorId Int?
+  status          EventStatus       @default(PENDING)
+  engagements     EventEngagement[]
+  admin           VerifiedUser      @relation(fields: [adminId], references: [id])
+  administrator   Administrator?    @relation(fields: [administratorId], references: [id])
+
+  @@map("events")
+}
+
+model EventEngagement {
+  eventId        Int          @map("event_id")
+  userId         Int          @map("user_id")
+  engagementType String       @map("engagement_type")
+  engagedAt      DateTime     @default(now()) @map("engaged_at")
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user           VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@id([eventId, userId])
+  @@map("event_engagements")
+}
+
+model Administrator {
+  id          Int          @id @default(autoincrement()) @map("admin_id")
+  username    String       @unique
+  password    String
+  roleLevel   String       @map("role_level")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  events      Event[]
+  kycRequests KycRequest[]
+  reportCases ReportCase[]
+
+  @@map("administrators")
+}
+
+model KycRequest {
+  id               Int            @id @default(autoincrement()) @map("request_id")
+  documentImageUrl String         @map("document_image_url")
+  rejectReason     String?        @map("reject_reason")
+  submittedAt      DateTime       @default(now()) @map("submitted_at")
+  reviewedAt       DateTime?      @map("reviewed_at")
+  userId           Int            @map("user_id")
+  adminId          Int?           @map("admin_id")
+  status           KycStatus      @default(PENDING)
+  admin            Administrator? @relation(fields: [adminId], references: [id])
+  user             VerifiedUser   @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@map("kyc_requests")
+}
+
+model ReportCase {
+  id          Int              @id @default(autoincrement()) @map("case_id")
+  reason      String
+  evidenceUrl String?          @map("evidence_url")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  adminId     Int?             @map("admin_id")
+  status      ReportCaseStatus @default(PENDING)
+  admin       Administrator?   @relation(fields: [adminId], references: [id])
+  parties     ReportParty[]
+
+  @@map("report_cases")
+}
+
+model ReportParty {
+  userId    Int          @map("user_id")
+  caseId    Int          @map("case_id")
+  partyRole String       @map("party_role")
+  case      ReportCase   @relation(fields: [caseId], references: [id])
+  user      VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@id([userId, caseId])
+  @@map("report_parties")
+}
+
+enum ProfileActionType {
+  PASS
+  LIKE
+  BLOCK
+}
+
+model UserProfileAction {
+  actorId   Int               @map("actor_id")
+  targetId  Int               @map("target_id")
+  action    ProfileActionType
+  createdAt DateTime          @default(now()) @map("created_at")
+  actor     VerifiedUser      @relation("ProfileActionsSent", fields: [actorId], references: [id], onDelete: Cascade)
+  target    VerifiedUser      @relation("ProfileActionsReceived", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([actorId, targetId, action])
+  @@index([actorId, action])
+  @@index([targetId, action])
+  @@map("user_profile_actions")
+}
+
+model Group {
+  groupId      Int                @id @default(autoincrement()) @map("group_id")
+  name         String
+  createdAt    DateTime           @default(now()) @map("created_at")
+  description  String?
+  groupAvatar  String?            @map("group_avatar")
+  groupCover   String?            @map("group_cover")
+  memberCount  Int                @default(0) @map("member_count")
+  hobbyTags    GroupHobbyTag[]
+  languageTags GroupLanguageTag[]
+  members      GroupMember[]
+  posts        Post[]
+
+  @@map("groups")
+}
+
+model GroupHobbyTag {
+  groupId Int    @map("group_id")
+  name    String
+  group   Group  @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+
+  @@id([groupId, name])
+  @@index([name])
+  @@map("group_hobby_tags")
+}
+
+model GroupLanguageTag {
+  groupId Int    @map("group_id")
+  name    String
+  group   Group  @relation(fields: [groupId], references: [groupId], onDelete: Cascade)
+
+  @@id([groupId, name])
+  @@index([name])
+  @@map("group_language_tags")
+}
+
+model GroupMember {
+  id       Int          @id @default(autoincrement())
+  userId   Int          @map("user_id")
+  groupId  Int          @map("group_id")
+  joinedAt DateTime     @default(now()) @map("joined_at")
+  group    Group        @relation(fields: [groupId], references: [groupId])
+  user     VerifiedUser @relation(fields: [userId], references: [id])
+
+  @@unique([userId, groupId])
+  @@index([userId])
+  @@index([groupId])
+  @@map("group_members")
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
+enum UserStatus {
+  PENDING
+  VERIFIED
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportCaseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
