@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "demo": "next build && next start",
+    "seed-images": "node scripts/gen-seed-images.mjs",
     "lint": "eslint"
   },
   "dependencies": {

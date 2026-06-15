@@ -21,7 +21,23 @@ function sortJlptLevels(tags: string[]): string[] {
     return [...inOrder, ...rest];
 }
 
+// Filter options (hobby/language tags) change very rarely, but the 3 DISTINCT
+// queries run on every community-home call against a DB in another region.
+// Cache them in-process with a short TTL to cut ~3 round-trips off each load.
+let filterOptionsCache: { value: Awaited<ReturnType<typeof loadGroupFilterOptionsUncached>>; expires: number } | null = null;
+const FILTER_OPTIONS_TTL_MS = 5 * 60_000;
+
 async function loadGroupFilterOptions() {
+    const now = Date.now();
+    if (filterOptionsCache && filterOptionsCache.expires > now) {
+        return filterOptionsCache.value;
+    }
+    const value = await loadGroupFilterOptionsUncached();
+    filterOptionsCache = { value, expires: now + FILTER_OPTIONS_TTL_MS };
+    return value;
+}
+
+async function loadGroupFilterOptionsUncached() {
     const [hobbyTags, languageTags, userHobbies] = await Promise.all([
         sql`select distinct name from group_hobby_tags order by name asc`,
         sql`select distinct name from group_language_tags order by name asc`,
