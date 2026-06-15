@@ -9,6 +9,8 @@ import {
     type AppNotification,
 } from "@/app/actions/notification";
 import { resolveImageUrl } from "@/lib/image";
+import { useAuth } from "@/lib/auth-context";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
 
 function getNotificationLink(notification: AppNotification): string | null {
     if (notification.type === "MATCH" && notification.sessionId) {
@@ -67,6 +69,9 @@ export default function NotificationBell() {
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+    const { user } = useAuth();
+    const userId = (user as { id?: number } | null)?.id;
+
     const loadNotifications = useCallback(async () => {
         setIsLoading(true);
         const res = await getNotificationsAction();
@@ -75,6 +80,29 @@ export default function NotificationBell() {
             setNotifications(res.data);
         }
     }, []);
+
+    // Initial load (for the unread badge) + live updates via Supabase Realtime.
+    useEffect(() => {
+        if (!userId) return;
+        void loadNotifications();
+
+        const supabase = getSupabaseBrowser();
+        if (!supabase) return;
+
+        const channel = supabase
+            .channel(`notify:${userId}`)
+            .on("broadcast", { event: "notification" }, ({ payload }) => {
+                const incoming = payload as AppNotification;
+                setNotifications((prev) =>
+                    prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]
+                );
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [userId, loadNotifications]);
 
     useEffect(() => {
         if (!open) return;

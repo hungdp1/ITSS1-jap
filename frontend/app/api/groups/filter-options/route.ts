@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { getApiBaseUrl } from "@/lib/env";
+import { localApiResponse } from "@/lib/api";
 import { GROUP_LANGUAGE_LEVEL_OPTIONS, sortJlptLevels } from "@/lib/groupFilters";
 
 export async function GET() {
     try {
-        const res = await fetch(`${getApiBaseUrl()}/groups/filter-options`, {
-            next: { revalidate: 300 },
-        });
+        const res = await localApiResponse("GET", "/groups/filter-options");
         const data = await res.json();
-
         if (!res.ok) {
             return NextResponse.json(
                 {
@@ -19,7 +16,6 @@ export async function GET() {
                 { status: res.status }
             );
         }
-
         return NextResponse.json(
             {
                 hobbyTags: data.hobbyTags ?? [],
@@ -28,11 +24,7 @@ export async function GET() {
                     ...(data.languageTags ?? []),
                 ]),
             },
-            {
-                headers: {
-                    "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-                },
-            }
+            { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
         );
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Failed to load filter options";

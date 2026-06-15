@@ -1,99 +1,68 @@
 // app/actions/post.ts
 "use server";
-import { cookies } from "next/headers";
-import { getApiBaseUrl } from "@/lib/api";
+import { localApiResponse, fileToUpload } from "@/lib/api";
 
 export async function getPostsAction(groupId: number, page = 1) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/posts?groupId=${groupId}&page=${page}&limit=10`, {
-            headers: { "Authorization": `Bearer ${token}` },
-            cache: "no-store"
-        });
+        const res = await localApiResponse("GET", `/posts?groupId=${groupId}&page=${page}&limit=10`);
         const data = await res.json();
         return { success: res.ok, data };
-    } catch (error: any) {
+    } catch {
         return { success: false };
     }
 }
 
 export async function createPostAction(formData: FormData) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/posts`, {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${token}` },
-            body: formData // multipart/form-data
+        const image = formData.get("image");
+        const res = await localApiResponse("POST", "/posts", {
+            body: {
+                content: formData.get("content"),
+                groupId: formData.get("groupId"),
+            },
+            file: image instanceof File && image.size > 0 ? await fileToUpload(image) : null,
         });
         const data = await res.json();
         return { success: res.ok, data };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }
 
 export async function likePostAction(postId: number) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/posts/like`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ postId })
-        });
+        const res = await localApiResponse("POST", "/posts/like", { body: { postId } });
         return { success: res.ok };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }
 
 export async function commentPostAction(postId: number, content: string) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/posts/comment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ postId, content })
-        });
+        const res = await localApiResponse("POST", "/posts/comment", { body: { postId, content } });
         const data = await res.json();
         return { success: res.ok, data };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }
 
 export async function unlikePostAction(postId: number) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/posts/unlike`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ postId })
-        });
+        const res = await localApiResponse("POST", "/posts/unlike", { body: { postId } });
         return { success: res.ok };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }
 
 export async function getCommentsAction(postId: number, page = 1) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(
-            `${getApiBaseUrl()}/posts/${postId}/comments?page=${page}&limit=20`,
-            {
-                headers: { "Authorization": `Bearer ${token}` },
-                cache: "no-store"
-            }
-        );
+        const res = await localApiResponse("GET", `/posts/${postId}/comments?page=${page}&limit=20`);
         const data = await res.json();
         return { success: res.ok, data };
-    } catch (error) {
+    } catch {
         return { success: false, data: { data: [] } };
     }
 }

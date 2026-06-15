@@ -1,27 +1,12 @@
 "use client";
 
-import { io, type Socket } from "socket.io-client";
-import { getSocketBaseUrl } from "@/lib/env";
 import type { ChatMessage } from "@/app/actions/chat";
 
-let sharedSocket: Socket | null = null;
-
-export function getChatSocket(): Socket {
-    if (!sharedSocket) {
-        sharedSocket = io(getSocketBaseUrl(), {
-            autoConnect: false,
-            transports: ["websocket", "polling"],
-        });
-    }
-    return sharedSocket;
-}
-
-export function disconnectChatSocket() {
-    if (sharedSocket) {
-        sharedSocket.disconnect();
-        sharedSocket = null;
-    }
-}
+/**
+ * Realtime payload types. Transport is Supabase Realtime (see useChatSocket),
+ * replacing the old Socket.IO layer. These types are kept stable so consumers
+ * (ChatClient) need no changes.
+ */
 
 export type OnlineStatusPayload = {
     userId: number;
@@ -70,36 +55,3 @@ export type ChatSocketHandlers = {
     onChatBlocked?: (payload: ChatBlockedPayload) => void;
     onChatUnblocked?: (payload: ChatUnblockedPayload) => void;
 };
-
-export function bindChatSocketHandlers(socket: Socket, handlers: ChatSocketHandlers) {
-    const {
-        onNewMessage,
-        onSeenMessage,
-        onOnlineStatus,
-        onMessageEdited,
-        onMessageDeleted,
-        onMessageTranslated,
-        onChatBlocked,
-        onChatUnblocked,
-    } = handlers;
-
-    if (onNewMessage) socket.on("newMessage", onNewMessage);
-    if (onSeenMessage) socket.on("seenMessage", onSeenMessage);
-    if (onOnlineStatus) socket.on("onlineStatus", onOnlineStatus);
-    if (onMessageEdited) socket.on("messageEdited", onMessageEdited);
-    if (onMessageDeleted) socket.on("messageDeleted", onMessageDeleted);
-    if (onMessageTranslated) socket.on("messageTranslated", onMessageTranslated);
-    if (onChatBlocked) socket.on("chatBlocked", onChatBlocked);
-    if (onChatUnblocked) socket.on("chatUnblocked", onChatUnblocked);
-
-    return () => {
-        if (onNewMessage) socket.off("newMessage", onNewMessage);
-        if (onSeenMessage) socket.off("seenMessage", onSeenMessage);
-        if (onOnlineStatus) socket.off("onlineStatus", onOnlineStatus);
-        if (onMessageEdited) socket.off("messageEdited", onMessageEdited);
-        if (onMessageDeleted) socket.off("messageDeleted", onMessageDeleted);
-        if (onMessageTranslated) socket.off("messageTranslated", onMessageTranslated);
-        if (onChatBlocked) socket.off("chatBlocked", onChatBlocked);
-        if (onChatUnblocked) socket.off("chatUnblocked", onChatUnblocked);
-    };
-}

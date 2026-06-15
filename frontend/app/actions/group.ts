@@ -1,18 +1,12 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { getApiBaseUrl } from "@/lib/api";
+import { localApiResponse } from "@/lib/api";
 import { GROUP_LANGUAGE_LEVEL_OPTIONS, sortJlptLevels } from "@/lib/groupFilters";
 import { normalizeSearchQuery } from "@/lib/search";
 
 export async function getGroupFilterOptionsAction() {
     try {
-        const res = await fetch(`${getApiBaseUrl()}/groups/filter-options`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            cache: "no-store",
-        });
-
+        const res = await localApiResponse("GET", "/groups/filter-options");
         const data = await res.json();
 
         if (!res.ok) {
@@ -45,61 +39,29 @@ export async function getGroupFilterOptionsAction() {
 
 export async function getMyGroupsAction() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-
-        if (!token) {
-            return { success: false, message: "ログインしてください。", data: [] }
-        }
-
-        const res = await fetch(`${getApiBaseUrl()}/groups/my-groups`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            cache: "no-store"
-        });
-
+        const res = await localApiResponse("GET", "/groups/my-groups");
         const data = await res.json();
-
         if (!res.ok) {
-            return { success: false, message: data.message || "グループの取得に失敗しました。" }
+            return { success: false, message: data.message || data.error || "グループの取得に失敗しました。", data: [] };
         }
-
-        return { success: true, data: data }
-    } catch (error: any) {
-        return { success: false, message: error.message || "グループの取得に失敗しました。", data: [] };
+        return { success: true, data };
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "グループの取得に失敗しました。";
+        return { success: false, message, data: [] };
     }
 }
 
 export async function getSuggestedGroupsAction() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-
-        if (!token) {
-            return { success: false, message: "ログインしてください。", data: [] }
-        }
-
-        const res = await fetch(`${getApiBaseUrl()}/groups/suggested`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            cache: "no-store"
-        });
-
+        const res = await localApiResponse("GET", "/groups/suggested");
         const data = await res.json();
-
         if (!res.ok) {
-            return { success: false, message: data.message || "おすすめグループの取得に失敗しました。" }
+            return { success: false, message: data.message || data.error || "おすすめグループの取得に失敗しました。", data: [] };
         }
-
-        return { success: true, data: data }
-    } catch (error: any) {
-        return { success: false, message: error.message || "おすすめグループの取得に失敗しました。", data: [] };
+        return { success: true, data };
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "おすすめグループの取得に失敗しました。";
+        return { success: false, message, data: [] };
     }
 }
 
@@ -109,11 +71,6 @@ export async function searchGroupsAction(params: {
     languageTag?: string;
 }) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-
-        if (!token) return { success: false, data: [] };
-
         const query = new URLSearchParams();
         const normalizedSearch = normalizeSearchQuery(params.search);
         if (normalizedSearch) query.set("search", normalizedSearch);
@@ -122,67 +79,38 @@ export async function searchGroupsAction(params: {
         query.set("limit", "50");
 
         const qs = query.toString();
-        const url = `${getApiBaseUrl()}/groups${qs ? `?${qs}` : ""}`;
-
-        const res = await fetch(url, {
-            method: "GET",
-            headers: { "Authorization": `Bearer ${token}` },
-            cache: "no-store",
-        });
-
+        const res = await localApiResponse("GET", `/groups${qs ? `?${qs}` : ""}`);
         const data = await res.json();
         return { success: res.ok, data: data.data || data };
-    } catch (error: any) {
+    } catch {
         return { success: false, data: [] };
     }
 }
 
-// グループ詳細の取得
 export async function getGroupCardAction(groupId: number) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        if (!token) return { success: false };
-
-        const res = await fetch(`${getApiBaseUrl()}/groups/card/${groupId}`, {
-            headers: { "Authorization": `Bearer ${token}` },
-            cache: "no-store"
-        });
+        const res = await localApiResponse("GET", `/groups/card/${groupId}`);
         const data = await res.json();
         return { success: res.ok, data };
-    } catch (error: any) {
-        return { success: false, message: error.message };
+    } catch (error: unknown) {
+        return { success: false, message: error instanceof Error ? error.message : "" };
     }
 }
 
-// グループ参加
 export async function joinGroupAction(groupId: number) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/groups/join`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ groupId })
-        });
+        const res = await localApiResponse("POST", "/groups/join", { body: { groupId } });
         return { success: res.ok };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }
 
-// グループ退出
 export async function leaveGroupAction(groupId: number) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const res = await fetch(`${getApiBaseUrl()}/groups/leave`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ groupId })
-        });
+        const res = await localApiResponse("POST", "/groups/leave", { body: { groupId } });
         return { success: res.ok };
-    } catch (error) {
+    } catch {
         return { success: false };
     }
 }

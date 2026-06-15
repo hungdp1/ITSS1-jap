@@ -1,5 +1,4 @@
-import { apiGet } from "@/lib/api";
-import { getApiBaseUrl } from "@/lib/env";
+import { apiGet, localApiResponse } from "@/lib/api";
 import type { EventFormat } from "@/app/actions/event";
 import { normalizeSearchQuery } from "@/lib/search";
 
@@ -19,12 +18,7 @@ export async function fetchPublicEventsList(params?: {
     const qs = query.toString();
 
     try {
-        const res = await fetch(`${getApiBaseUrl()}/events/public${qs ? `?${qs}` : ""}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            next: { revalidate: 60 },
-        });
-
+        const res = await localApiResponse("GET", `/events/public${qs ? `?${qs}` : ""}`);
         const data = await res.json().catch(() => null);
 
         if (!res.ok) {

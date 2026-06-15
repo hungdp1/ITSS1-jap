@@ -1,8 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { apiGet, apiPost } from "@/lib/api";
-import { getApiBaseUrl } from "@/lib/env";
+import { apiGet, apiPost, localApiResponse, fileToUpload } from "@/lib/api";
 import type { MessageTranslations } from "@/lib/chat-translation";
 
 export type ChatUser = {
@@ -95,19 +93,9 @@ export async function sendMessageWithAttachmentAction(
     content?: string
 ) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const formData = new FormData();
-        formData.append("attachment", file);
-        if (content?.trim()) {
-            formData.append("content", content.trim());
-        }
-
-        const res = await fetch(`${getApiBaseUrl()}/chats/${sessionId}/messages`, {
-            method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: formData,
-            cache: "no-store",
+        const res = await localApiResponse("POST", `/chats/${sessionId}/messages`, {
+            body: content?.trim() ? { content: content.trim() } : {},
+            file: await fileToUpload(file),
         });
 
         const data = await res.json().catch(() => null);

@@ -1,7 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { apiPost, getApiBaseUrl } from "@/lib/api";
+import { apiPost, localApiResponse, fileToUpload } from "@/lib/api";
 import { normalizeSearchQuery } from "@/lib/search";
 
 export type MatchingSearchParams = {
@@ -15,27 +14,7 @@ export type MatchingSearchParams = {
 
 export async function getMatchingFilterOptionsAction() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-
-        if (!token) {
-            return {
-                success: false,
-                message: "ログインしてください。",
-                purposes: [] as string[],
-                hobbies: [] as string[],
-            };
-        }
-
-        const res = await fetch(`${getApiBaseUrl()}/matchings/filter-options`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            cache: "no-store",
-        });
-
+        const res = await localApiResponse("GET", "/matchings/filter-options");
         const data = await res.json();
 
         if (!res.ok) {
@@ -65,19 +44,6 @@ export async function getMatchingFilterOptionsAction() {
 
 export async function searchMatchingUsersAction(params: MatchingSearchParams = {}) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-
-        if (!token) {
-            return {
-                success: false,
-                message: "ログインしてください。",
-                data: [],
-                total: 0,
-                hasMore: false,
-            };
-        }
-
         const query = new URLSearchParams();
         if (params.page) query.set("page", String(params.page));
         const normalizedSearch = normalizeSearchQuery(params.search);
@@ -87,18 +53,7 @@ export async function searchMatchingUsersAction(params: MatchingSearchParams = {
         if (params.purpose?.trim()) query.set("purpose", params.purpose.trim());
         if (params.jlptLevel?.trim()) query.set("jlptLevel", params.jlptLevel.trim());
 
-        const res = await fetch(
-            `${getApiBaseUrl()}/matchings/search?${query.toString()}`,
-            {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                cache: "no-store",
-            }
-        );
-
+        const res = await localApiResponse("GET", `/matchings/search?${query.toString()}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -212,20 +167,9 @@ export async function reportUserAction(
     evidence?: File | null
 ) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("tomoio_token")?.value;
-        const formData = new FormData();
-        formData.append("targetUserId", String(targetUserId));
-        formData.append("reason", reason.trim());
-        if (evidence) {
-            formData.append("evidence", evidence);
-        }
-
-        const res = await fetch(`${getApiBaseUrl()}/matchings/report`, {
-            method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: formData,
-            cache: "no-store",
+        const res = await localApiResponse("POST", "/matchings/report", {
+            body: { targetUserId, reason: reason.trim() },
+            file: evidence ? await fileToUpload(evidence) : null,
         });
 
         const data = await res.json().catch(() => null);

@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "@/lib/env";
+import { localApiResponse } from "@/lib/api";
 
 export type PublicStatsPayload = {
     activeUserCount: number;
@@ -12,12 +12,7 @@ const EMPTY_STATS: PublicStatsPayload = {
 
 export async function fetchPublicStats(): Promise<PublicStatsPayload> {
     try {
-        const res = await fetch(`${getApiBaseUrl()}/stats/public`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            next: { revalidate: 60 },
-        });
-
+        const res = await localApiResponse("GET", "/stats/public");
         const data: unknown = await res.json().catch(() => null);
 
         if (!res.ok || !data || typeof data !== "object") {

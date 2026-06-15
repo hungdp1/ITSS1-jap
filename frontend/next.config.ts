@@ -13,8 +13,9 @@ const nextConfig: NextConfig = {
         process.env.NEXT_PUBLIC_SITE_DOMAIN,
       ].filter((origin): origin is string => Boolean(origin)),
     },
-    optimizePackageImports: ["socket.io-client"],
   },
+  // Keep the Postgres driver out of the bundle (server-only native-ish deps).
+  serverExternalPackages: ["postgres"],
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200],
@@ -44,6 +45,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'picsum.photos',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
       }
     ],
   },

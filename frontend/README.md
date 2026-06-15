@@ -1,64 +1,19 @@
-# Tomoio Frontend Local
+# Tomoio frontend
 
-Frontend Next.js ket noi backend local.
+Single Next.js app — the whole product (DB, auth, storage, realtime) runs through
+Supabase. There is no separate backend server anymore.
 
-## Cau Truc
-
-```text
-app/                    # Route, page, API proxy, server actions
-components/             # UI components theo domain
-hooks/                  # React hooks
-lib/                    # API clients, formatter, auth/session/socket helpers
-public/assets/images/   # Anh tinh duoc chia theo nhom
-```
-
-## Setup
-
-Dam bao backend dang chay tai `http://localhost:5001`, sau do:
+Setup, env vars, and Vercel deployment are documented in the repo root
+[`README.md`](../README.md).
 
 ```bash
 npm install
-cp .env.local.example .env.local
+cp .env.local.example .env.local   # then fill in Supabase + JWT values
+npm run dev                         # http://localhost:3000
 ```
 
-Noi dung `.env.local`:
+Demo login: `seed.user001@tomoio.local` / `123456`.
 
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:5001/api
-NEXT_PUBLIC_SOCKET_URL=http://localhost:5001
-```
-
-Chay frontend:
-
-```bash
-npm run dev
-```
-
-Mo:
-
-```text
-http://localhost:3000
-```
-
-## Tai Khoan Demo
-
-Neu backend da chay seed:
-
-```text
-Email: seed.user001@tomoio.local
-Password: 123456
-```
-
-## Lenh
-
-```bash
-npm run dev
-npm run build
-npm run lint
-```
-
-## Trang Thai Da Test
-
-- Frontend chay duoc tai `http://localhost:3000`.
-- Trang chu render duoc va doc du lieu event seed tu backend.
-- `npm run lint` hien con loi code san co ve ESLint/React rules, khong phai loi ket noi backend/frontend.
+The server-side "backend" lives in `lib/server/` (db, auth, storage, translate,
+realtime, per-domain handlers, and an in-process `router.ts`). `lib/api.ts`
+dispatches API paths to it; `app/api/*` are thin proxy routes for the browser.

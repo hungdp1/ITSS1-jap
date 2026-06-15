@@ -1,17 +1,14 @@
 "use server";
 
-import { getApiBaseUrl } from "@/lib/api";
+import { localApiResponse, fileToUpload } from "@/lib/api";
 import { clearAuthCookies, getSessionUser, setAuthCookies } from "@/lib/auth-session";
 
 /** @deprecated Prefer POST /api/auth/login from client components */
 export async function loginAction(email: string, password: string) {
     try {
-        const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
+        const res = await localApiResponse("POST", "/auth/login", {
+            body: { email, password },
         });
-
         const data = await res.json();
 
         if (!res.ok) {
@@ -19,13 +16,13 @@ export async function loginAction(email: string, password: string) {
                 success: false,
                 message:
                     data.message ||
+                    data.error ||
                     "ログインに失敗しました。メールアドレスまたはパスワードが正しくありません。",
             };
         }
 
         const { token, user } = data;
         await setAuthCookies(token, user);
-
         return { success: true, user };
     } catch (error: unknown) {
         const message =
@@ -39,11 +36,16 @@ export async function loginAction(email: string, password: string) {
 /** @deprecated Prefer POST /api/auth/register from client components */
 export async function registerAction(formData: FormData) {
     try {
-        const res = await fetch(`${getApiBaseUrl()}/auth/register`, {
-            method: "POST",
-            body: formData,
+        const cccd = formData.get("cccd");
+        const res = await localApiResponse("POST", "/auth/register", {
+            body: {
+                email: formData.get("email"),
+                password: formData.get("password"),
+                language: formData.get("language"),
+                purpose: formData.get("purpose"),
+            },
+            file: cccd instanceof File && cccd.size > 0 ? await fileToUpload(cccd) : null,
         });
-
         const data = await res.json();
 
         if (!res.ok) {

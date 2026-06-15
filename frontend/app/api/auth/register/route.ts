@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
-import { getApiBaseUrl } from "@/lib/api";
+import { localApiResponse, fileToUpload } from "@/lib/api";
 
 export async function POST(request: Request) {
     try {
         const formData = await request.formData();
-
-        const res = await fetch(`${getApiBaseUrl()}/auth/register`, {
-            method: "POST",
-            body: formData,
+        const cccd = formData.get("cccd");
+        const res = await localApiResponse("POST", "/auth/register", {
+            body: {
+                email: formData.get("email"),
+                password: formData.get("password"),
+                language: formData.get("language"),
+                purpose: formData.get("purpose"),
+            },
+            file: cccd instanceof File && cccd.size > 0 ? await fileToUpload(cccd) : null,
         });
-
         const data = await res.json();
 
         if (!res.ok) {
